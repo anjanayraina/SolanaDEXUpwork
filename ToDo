@@ -1,0 +1,9 @@
+Milestone 1 , Contracts to be done : contracts/plugins/PositionRouter.sol contracts/plugins/Router.sol contracts/plugins/Liquidator.sol contracts/plugins/Orderbook.sol
+
+Milestone 2 , Contracts to be done : contracts/core/PoolFactory.sol contracts/core/Pool.sol
+
+Milestone 3 , Contracts to be done : contracts/libraries/*.sol (All) contracts/misc/*.sol (All) contracts/types/PackedValue.sol
+
+Milestone 4 , Contracts to be done : contracts/governance/*.sol (All) contracts/oracle/*.sol (All) -> Chainlink
+
+Milestone 5 , Contracts to be done : Complete the remaining contracts in full
