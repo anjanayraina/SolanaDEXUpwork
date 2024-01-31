@@ -36,8 +36,8 @@ mod router {
         require!(
             AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
             SimpleAccessControlError::Unauthorized
-        );        // pool open position
-        // return a u64 value
+        );        
+        
         Ok(100)
     }
 
@@ -45,8 +45,8 @@ mod router {
         require!(
             AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
             SimpleAccessControlError::Unauthorized
-        );        // pool open position
-        // return a u64 value
+        );        
+        
       Ok(())
     }
 
@@ -138,9 +138,8 @@ mod router {
         // Collect the referral fee
     pub fn plugin_collect_referral_fee(
             ctx: Context<PositionManagement>, 
-            account: Pubkey, 
-            side: bool, 
-            size_delta: u64, 
+            pool: Pubkey, 
+            referral_token: u64, 
             receiver: Pubkey
         ) -> Result<()> {
             // TODO: Implement access control for liquidator, position closing logic
@@ -149,7 +148,10 @@ mod router {
                 SimpleAccessControlError::Unauthorized
             );            Ok(())
         }
-    
+
+
+
+  
 
 
 }
@@ -222,6 +224,12 @@ pub struct RewardManagement<'info>  {
     pub authorized_account: AccountInfo<'info>,
 }
 
+
+#[account]
+pub struct Pool {
+    // Fields representing the state of the pool
+}
+
 #[account]
 #[derive(Default)]
 pub struct MyAccount {
@@ -257,10 +265,9 @@ pub struct RestrictedFunction<'info> {
 
 // Hardcoded list of authorized addresses
 // Replace these with actual public keys of the accounts you wish to authorize
-const AUTHORIZED_ADDRESSES: &[Pubkey] = &[
+const AUTHORIZED_ADDRESSES: [Pubkey; 2] = [
     Pubkey::new_from_array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]),
     Pubkey::new_from_array([33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64]),
-    // Add more addresses if necessary
 ];
 
 // Custom error definitions for the program
