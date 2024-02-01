@@ -1,39 +1,47 @@
 use anchor_lang::prelude::*;
 
-
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnR");
-
+const GOVERNOR_PUBKEY: Pubkey = Pubkey::new_from_array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
 #[program]
 pub mod liquidator {
     use super::*;
 
     // Initialization function equivalent in Anchor
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        // Initialization logic here
-        require!(ctx.accounts.authorized_account.is_signer, MyError::CallerUnauthorized);
-
+    pub fn initialize(ctx: Context<Initialize> , _router : Pubkey , _pool_factory : Pubkey , _efc:Pubkey) -> Result<()> {
+        require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
+        let state =&mut ctx.accounts.state;
+        require!(!state.initilized , MyError::AlreadyInitlized );
+        state.initilized = true;
+        state.router = _router;
+        state.pool_factory = _pool_factory;
+        state.efc = _efc;
         Ok(())
     }
 
     // Function to update price feed
-    pub fn update_price_feed(ctx: Context<UpdatePriceFeed>) -> Result<()> {
+    pub fn update_price_feed(ctx: Context<UpdatePriceFeed> , _price_feed : Pubkey) -> Result<()> {
+        require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
         // Logic to update price feed
-        require!(ctx.accounts.authorized_account.is_signer, MyError::CallerUnauthorized);
+        let state =&mut ctx.accounts.state;
+        state.price_feed= _price_feed;
 
         Ok(())
     }
 
     // Function to update executor
-    pub fn update_executor(ctx: Context<UpdateExecutor>, executor: Pubkey, active: bool) -> Result<()> {
+    pub fn remove_executor(ctx: Context<UpdateExecutor>, executor: Pubkey) -> Result<()> {
+        require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
+        let address_list = &mut ctx.accounts.state.executors;
+        address_list.retain(|&x| x != executor);
         // Logic to update executor
-        require!(ctx.accounts.authorized_account.is_signer, MyError::CallerUnauthorized);
-
         Ok(())
     }
 
     // Function to liquidate liquidity position
-    pub fn liquidate_liquidity_position(ctx: Context<LiquidateLiquidityPosition>, /* parameters */) -> Result<()> {
-        // Logic to liquidate liquidity position
+    pub fn liquidate_liquidity_position(ctx: Context<LiquidateLiquidityPosition>, pool : Pubkey , _position_id : u64 , _fee_reciever : Pubkey) -> Result<()> {
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);
 
         Ok(())
     }
@@ -41,53 +49,102 @@ pub mod liquidator {
     // Function to liquidate position
     pub fn liquidate_position(ctx: Context<LiquidatePosition>, /* parameters */) -> Result<()> {
         // Logic to liquidate position
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);
+        Ok(())
+    }
+
+    pub fn add_executor(ctx: Context<GovernanceAction>, new_executor: Pubkey) -> Result<()> {
+        // Ensure the caller is the governor
+        require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
+
+        // Add new executor to the list
+        let governance_state = &mut ctx.accounts.governance_state;
+        governance_state.executors.push(new_executor);
         Ok(())
     }
 
     // Additional functions as per your contract
 }
 
+// Contract state to hold the list of authorized addresses
+#[account]
+pub struct ContractState {
+    pub executors: Vec<Pubkey>,
+    router : Pubkey,
+    pool_factory : Pubkey,
+    efc : Pubkey,
+    price_feed : Pubkey,
+    initilized: bool,
+}
+
+// #[account]
+// pub struct Executors {
+//     pub executor_address: Pubkey,
+//     pub isActive: bool,
+// }
+#[derive(Accounts)]
+pub struct GovernanceAction<'info> {
+    // The account performing the action. Must be the governor.
+    /// CHECK
+    #[account(signer)]
+    pub authorized_account: AccountInfo<'info>,
+    // The governance state account.
+    #[account(mut)]
+    pub governance_state: Account<'info, ContractState>,
+}
+
+
 // Context struct for Initialize function
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    // Define accounts and constraints here...
+     // Adjust space as needed
+    /// CHECK
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+
 }
 
 // Context struct for UpdatePriceFeed function
 #[derive(Accounts)]
 pub struct UpdatePriceFeed<'info> {
-    // Define accounts and constraints here...
+     // Adjust space as needed
+    /// CHECK
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
 }
 
 // Context struct for UpdateExecutor function
 #[derive(Accounts)]
 pub struct UpdateExecutor<'info> {
-    // Define accounts and constraints here...
+    /// CHECK
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
 }
 
 // Context struct for LiquidateLiquidityPosition function
 #[derive(Accounts)]
 pub struct LiquidateLiquidityPosition<'info> {
-    // Define accounts and constraints here...
+        /// CHECK
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 // Context struct for LiquidatePosition function
 #[derive(Accounts)]
 pub struct LiquidatePosition<'info> {
-    // Define accounts and constraints here...
-    #[account(signer)]
-    pub authorized_account: AccountInfo<'info>,
+        /// CHECK
+        #[account(signer)]
+        pub authorized_account: AccountInfo<'info>,
+        pub state: Account<'info, ContractState>,
+        pub user: Signer<'info>,
 }
-
-// Add other context structs and data structures as needed
 
 // Custom errors
 #[error_code]
@@ -96,6 +153,7 @@ pub enum MyError {
     CallerUnauthorized,
     #[msg("Invalid operation")]
     InvalidOperation,
+    #[msg("Program Already initilized")]
+    AlreadyInitlized,
     // Add other custom errors
 }
-
