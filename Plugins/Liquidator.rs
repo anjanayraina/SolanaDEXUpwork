@@ -1,4 +1,7 @@
 use anchor_lang::prelude::*;
+use anchor_lang::InstructionData;
+use anchor_lang::solana_program;
+use anchor_lang::solana_program::program::invoke;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnR");
 const GOVERNOR_PUBKEY: Pubkey = Pubkey::new_from_array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
@@ -64,6 +67,35 @@ pub mod liquidator {
         governance_state.executors.push(new_executor);
         Ok(())
     }
+
+    pub fn _choose_index_price(ctx: Context<GovernanceAction> , token : Pubkey , side : bool) -> Result<u64>{
+        if side{
+
+        }
+    Ok(100)
+    }
+
+    pub fn _choose_funding_rate_growth(ctx: Context<GovernanceAction> , pool : Pubkey , side : bool) -> Result<u64>{
+        if side{
+
+        }
+    Ok(100)
+    }
+
+    pub fn _require_liquidatable(ctx: Context<GovernanceAction> , token : Pubkey , side : bool , _account : Pubkey , _margin:u64 , _size : u64 , _enrty_price_x96 :u64, _decrease_price_x96:u64) -> Result<u64>{
+        if side{
+
+        }
+    Ok(100)
+    }
+
+    pub fn _has_unrealized_profit(ctx: Context<GovernanceAction> , _entry_price: u64 , side : bool , _index_price :u64 ) -> Result<bool>{
+        if side{
+
+        }
+    Ok(true)
+    }
+
 
     // Additional functions as per your contract
 }
@@ -145,6 +177,7 @@ pub struct LiquidatePosition<'info> {
         pub state: Account<'info, ContractState>,
         pub user: Signer<'info>,
 }
+
 
 // Custom errors
 #[error_code]
