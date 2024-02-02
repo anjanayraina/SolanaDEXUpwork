@@ -22,21 +22,41 @@ mod router {
     }
 
     
-    pub fn add_plugin(ctx: Context<UpdateExecutor>, new_executor: Pubkey) -> Result<()> {
+    pub fn add_plugin(ctx: Context<UpdateExecutor>, new_plugin: Pubkey) -> Result<()> {
         // Ensure the caller is the governor
         require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
 
         // Add new executor to the list
         let governance_state = &mut ctx.accounts.state;
-        governance_state.executors.push(new_executor);
+        governance_state.executors.push(new_plugin);
         Ok(())
     }
 
         // Function to update executor
-    pub fn remove_plugin(ctx: Context<UpdateExecutor>, executor: Pubkey) -> Result<()> {
+    pub fn remove_plugin(ctx: Context<UpdateExecutor>, plugin_address: Pubkey) -> Result<()> {
             require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
             let address_list = &mut ctx.accounts.state.executors;
-            address_list.retain(|&x| x != executor);
+            address_list.retain(|&x| x != plugin_address);
+            // Logic to update executor
+            Ok(())
+        }
+
+            
+    pub fn add_liquidator(ctx: Context<UpdateExecutor>, new_liquidator: Pubkey) -> Result<()> {
+        // Ensure the caller is the governor
+        require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
+
+        // Add new executor to the list
+        let governance_state = &mut ctx.accounts.state;
+        governance_state.liquidators.push(new_liquidator);
+        Ok(())
+    }
+
+        // Function to update executor
+    pub fn remove_liquidator(ctx: Context<UpdateExecutor>, liquidator_address: Pubkey) -> Result<()> {
+            require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
+            let address_list = &mut ctx.accounts.state.liquidators;
+            address_list.retain(|&x| x != liquidator_address);
             // Logic to update executor
             Ok(())
         }
