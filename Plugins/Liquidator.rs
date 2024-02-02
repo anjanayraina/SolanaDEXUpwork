@@ -50,11 +50,20 @@ pub mod liquidator {
     }
 
     // Function to liquidate position
-    pub fn liquidate_position(ctx: Context<LiquidatePosition>, /* parameters */) -> Result<()> {
+    pub fn liquidate_position(ctx: Context<LiquidatePosition>, token : Pubkey , account : Pubkey , side : bool , _fee_reciever : Pubkey ) -> Result<()> {
         // Logic to liquidate position
         let address_list = &mut ctx.accounts.state.executors;
         let user_pubkey = ctx.accounts.user.key();
         require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);
+        // let decrease_index_price = _choose_index_price(ctx ,token , size)?;
+        let decrease_index_price=0;
+        let _has_unrealized_profit:bool = false;
+        let size = 100;
+        if size ==0 ||  _has_unrealized_profit {
+            // liquidate position 
+           return Ok(())
+        }
+
         Ok(())
     }
 
