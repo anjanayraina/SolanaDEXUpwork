@@ -1,6 +1,7 @@
 use anchor_lang::{
     prelude::*
 };
+const GOVERNOR_PUBKEY: Pubkey = Pubkey::new_from_array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
 
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -9,44 +10,67 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 #[program]
 mod router {
     use super::*;
-    pub fn set_data(ctx: Context<SetData>, data: u64) -> Result<()> {
-        ctx.accounts.my_account.data = data;
+    pub fn initilize(ctx: Context<SetData>, efc: Pubkey , reward_farm : Pubkey , fee_distributor : Pubkey) -> Result<()> {
+        require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::Unauthorized);     
+        let state =&mut ctx.accounts.state;
+        require!(!state.initilized , MyError::AlreadyInitlized );
+        state.efc= efc;
+        state.reward_farm = reward_farm;
+        state.fee_distributor = fee_distributor;
+        
         Ok(())
     }
 
+    
+    pub fn add_plugin(ctx: Context<UpdateExecutor>, new_executor: Pubkey) -> Result<()> {
+        // Ensure the caller is the governor
+        require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
+
+        // Add new executor to the list
+        let governance_state = &mut ctx.accounts.state;
+        governance_state.executors.push(new_executor);
+        Ok(())
+    }
+
+        // Function to update executor
+    pub fn remove_plugin(ctx: Context<UpdateExecutor>, executor: Pubkey) -> Result<()> {
+            require!(ctx.accounts.authorized_account.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
+            let address_list = &mut ctx.accounts.state.executors;
+            address_list.retain(|&x| x != executor);
+            // Logic to update executor
+            Ok(())
+        }
+
     pub fn plugin_transfer(ctx: Context<PluginTransfer>, amount: u64, from: Pubkey, to: Pubkey) -> Result<()> {
-        require!(
-            AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-            SimpleAccessControlError::Unauthorized
-        );
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);
         // token transfer logic
         Ok(())
     }
 
     pub fn plugin_transfer_nft(ctx: Context<PluginTransferNFT>, from: Pubkey , to:Pubkey , tokenID:u64) -> Result<()> {
-        require!(
-            AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-            SimpleAccessControlError::Unauthorized
-        );
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);
+        
         //token transfer
         Ok(())
     }
 
     pub fn plugin_open_liquidity_position(ctx: Context<LiquidityPosition>, account: Pubkey, margin:u64, liquidity:u64) -> Result<u64> {
-        require!(
-            AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-            SimpleAccessControlError::Unauthorized
-        );        
-        
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized); 
+        /// external call to pool
         Ok(100)
     }
 
     pub fn plugin_close_liquidity_position(ctx: Context<LiquidityPosition>,  _positionID:u64 ,  _receiver:Pubkey ) -> Result<()> {
-        require!(
-            AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-            SimpleAccessControlError::Unauthorized
-        );        
-        
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);   
+        // extrernal call to pool
       Ok(())
     }
 
@@ -54,10 +78,9 @@ mod router {
         _positionID:u64,
         _marginDelta:u64,
         _receiver:Pubkey) -> Result<()> {
-            require!(
-                AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-                SimpleAccessControlError::Unauthorized
-            );        // pool open position
+            let address_list = &mut ctx.accounts.state.executors;
+            let user_pubkey = ctx.accounts.user.key();
+            require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);
         // return a u64 value
       Ok(())
     }
@@ -69,10 +92,10 @@ mod router {
         account: Pubkey, 
         liquidity_delta: u64
     ) -> Result<()> {
-        require!(
-            AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-            SimpleAccessControlError::Unauthorized
-        );        Ok(())
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);  
+        Ok(())
     }
 
     
@@ -83,10 +106,10 @@ mod router {
         liquidity_delta: u64, 
         receiver: Pubkey
     ) -> Result<()> {
-        require!(
-            AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-            SimpleAccessControlError::Unauthorized
-        );        Ok(())
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);
+        Ok(())
     }
 
     // Increase the margin/liquidity of a position
@@ -98,10 +121,10 @@ mod router {
         size_delta: u64
     ) -> Result<u64> {
         // TODO: Implement access control, position increase logic
-        require!(
-            AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-            SimpleAccessControlError::Unauthorized
-        );        Ok(0) // Placeholder for trade price
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);    
+        Ok(0) // Placeholder for trade price
     }
 
     // Decrease the margin/liquidity of a position
@@ -114,10 +137,10 @@ mod router {
         receiver: Pubkey
     ) -> Result<u64> {
         // TODO: Implement access control, position decrease logic
-        require!(
-            AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-            SimpleAccessControlError::Unauthorized
-        );        Ok(0) // Placeholder for trade price
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);    
+        Ok(0) // Placeholder for trade price
     }
 
     // Close a position by the liquidator
@@ -129,10 +152,10 @@ mod router {
         receiver: Pubkey
     ) -> Result<()> {
         // TODO: Implement access control for liquidator, position closing logic
-        require!(
-            AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-            SimpleAccessControlError::Unauthorized
-        );        Ok(())
+        let address_list = &mut ctx.accounts.state.executors;
+        let user_pubkey = ctx.accounts.user.key();
+        require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized); 
+        Ok(())
     }
 
         // Collect the referral fee
@@ -143,10 +166,10 @@ mod router {
             receiver: Pubkey
         ) -> Result<()> {
             // TODO: Implement access control for liquidator, position closing logic
-            require!(
-                AUTHORIZED_ADDRESSES.contains(ctx.accounts.authorized_account.key),
-                SimpleAccessControlError::Unauthorized
-            );            Ok(())
+            let address_list = &mut ctx.accounts.state.executors;
+            let user_pubkey = ctx.accounts.user.key();
+            require!(address_list.contains(&user_pubkey) , MyError::CallerUnauthorized);        
+            Ok(())
         }
 
 
@@ -156,72 +179,96 @@ mod router {
 
 }
 
-#[derive(Accounts)]
-pub struct PluginTransfer<'info> {
-    // Define accounts needed for plugin_transfer
-    // TODO: Define the account structs required for token transfer
-    /// CHECK: The authorized_account is checked to be a signer, ensuring that only 
+#[account] 
+pub struct ContractState {
 
+    efc : Pubkey,
+    reward_farm : Pubkey , 
+    fee_distributor : Pubkey ,
+    initilized : bool,
+    executors : Vec<Pubkey>,
+    liquidators : Vec<Pubkey>,         
+
+}
+
+#[derive(Accounts)] 
+pub struct UpdateExecutor<'info> {
+          // Adjust space as needed
+    /// CHECK
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct PluginTransfer<'info> {
+      // Adjust space as needed
+    /// CHECK
+    #[account(signer)]
+    pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct PluginTransferNFT<'info>  {
-    // Define accounts needed for plugin_transfer_nft
-    // TODO: Define the account structs required for NFT transfer
-        /// CHECK: The authorized_account is checked to be a signer, ensuring that only 
-
-        #[account(signer)]
-        pub authorized_account: AccountInfo<'info>,
+     // Adjust space as needed
+    /// CHECK
+    #[account(signer)]
+    pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct LiquidityPosition<'info>  {
-    // Define accounts needed for liquidity position functions
-    // TODO: Define the account structs required for liquidity position management
-        /// CHECK: The authorized_account is checked to be a signer, ensuring that only 
-
-        #[account(signer)]
-        pub authorized_account: AccountInfo<'info>,
+     // Adjust space as needed
+    /// CHECK
+    #[account(signer)]
+    pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct RiskBufferFundPosition<'info>  {
-    // Define accounts needed for risk buffer fund position functions
-    // TODO: Define the account structs required for risk buffer fund management
-    /// CHECK: The authorized_account is checked to be a signer, ensuring that only 
-
+     // Adjust space as needed
+    /// CHECK
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct PositionManagement<'info>  {
-    // Define accounts needed for position management functions
-    // TODO: Define the account structs required for position management
-    /// CHECK: The authorized_account is checked to be a signer, ensuring that only 
-
+     // Adjust space as needed
+    /// CHECK
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct ReferralManagement<'info> {
-    // Define accounts needed for referral management functions
-    // TODO: Define the account structs required for referral management
-       /// CHECK: The authorized_account is checked to be a signer, ensuring that only 
+     // Adjust space as needed
+    /// CHECK
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct RewardManagement<'info>  {
-    // Define accounts needed for reward management functions
-    // TODO: Define the account structs required for reward management
-       /// CHECK: The authorized_account is checked to be a signer, ensuring that only 
+     // Adjust space as needed
+    /// CHECK
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 
@@ -239,17 +286,25 @@ pub struct MyAccount {
 
 #[derive(Accounts)]
 pub struct SetData<'info> {
-    #[account(mut)]
-    pub my_account: Account<'info, MyAccount>
+     // Adjust space as needed
+    /// CHECK
+    #[account(signer)]
+    pub authorized_account: AccountInfo<'info>,
+    pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 #[error_code]
 pub enum MyError {
     #[msg("Unauthorized Caller")]
-    CallerUnauthorized
+    Unauthorized
     ,
+    #[msg["Unauthorsized caller"]]
+    CallerUnauthorized,
     #[msg("Owner Mismatch")]
-    OwnerMismatch
+    OwnerMismatch , 
+    #[msg("Program already initlized")]
+    AlreadyInitlized,
 }
 
 
@@ -263,12 +318,7 @@ pub struct RestrictedFunction<'info> {
     pub caller: AccountInfo<'info>,
 }
 
-// Hardcoded list of authorized addresses
-// Replace these with actual public keys of the accounts you wish to authorize
-const AUTHORIZED_ADDRESSES: [Pubkey; 2] = [
-    Pubkey::new_from_array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]),
-    Pubkey::new_from_array([33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64]),
-];
+
 
 // Custom error definitions for the program
 #[error_code]
@@ -276,5 +326,7 @@ pub enum SimpleAccessControlError {
     // Error when an unauthorized account tries to call the function
     #[msg("The caller is not authorized to perform this action")]
     Unauthorized,
+    #[msg("Program already initlized")]
+    AlreadyInitlized,
 }
 

@@ -134,6 +134,7 @@ pub struct GovernanceAction<'info> {
     // The governance state account.
     #[account(mut)]
     pub governance_state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 
@@ -145,6 +146,7 @@ pub struct Initialize<'info> {
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
     pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 
 }
 
@@ -156,6 +158,7 @@ pub struct UpdatePriceFeed<'info> {
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
     pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 // Context struct for UpdateExecutor function
@@ -165,6 +168,7 @@ pub struct UpdateExecutor<'info> {
     #[account(signer)]
     pub authorized_account: AccountInfo<'info>,
     pub state: Account<'info, ContractState>,
+    pub user: Signer<'info>,
 }
 
 // Context struct for LiquidateLiquidityPosition function
