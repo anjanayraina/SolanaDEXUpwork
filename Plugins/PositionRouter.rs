@@ -65,8 +65,6 @@ mod position_router {
 
     // Function to update execution gas limit
     pub fn update_execution_gas_limit(ctx: Context<UpdateExecutionGasLimit>, new_gas_limt : u128 ) -> Result<()> {
-        // Logic to update execution gas limit
-                // Logic to update minimum execution fee
                 require!(ctx.accounts.user.key() == GOVERNOR_PUBKEY, MyError::CallerUnauthorized);
                 let state =&mut ctx.accounts.state;
                 state.execution_gas_limit = new_gas_limt;
@@ -97,25 +95,53 @@ mod position_router {
         Ok((positions.len() as u128).into() ) 
     }
 
-    pub fn cancel_open_liquidity_position(ctx: Context<CreateOpenLiquidityPosition>, index : u128 , execution_fee_reciever : Pubkey) -> Result<bool>{
-        // should cancel check to be added 
+    pub fn cancel_open_liquidity_position(ctx: Context<CreateOpenLiquidityPosition>, index : usize , execution_fee_reciever : Pubkey) -> Result<bool>{
         // transfer eth out 
         let state =&mut ctx.accounts.state;
-        state.open_liquidity_position_requests.remove(index.try_into().unwrap());
+        let clock: Clock = Clock::get().unwrap();
+        let clock2: Clock = Clock::get()?;
+        let state =&mut ctx.accounts.state;
+        let position = state.open_liquidity_position_requests.get(index);
+        // _should_cancel(block_number : u128 , position_block_time : u128, account : Pubkey , block_timestamp : u128 , min_block_delayer_executor :u128  , sender : Pubkey)
+        if let Some(position) = state.open_liquidity_position_requests.get(index) {
+            // Now you can directly access fields of `position`
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            require!(should_cancel , MyError::CallerUnauthorized);
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
+        state.open_liquidity_position_requests.remove(index);
         Ok(true)
     }
 
     pub fn execute_open_liquidity_position(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
+        index: usize,
         execution_fee_receiver: Pubkey,
     ) -> Result<bool> {
         
-        // should execute check 
+
         // usdc transfer 
         // external call to plugin 
         // transfer out eth 
         let state =&mut ctx.accounts.state;
+        let clock: Clock = Clock::get().unwrap();
+        let clock2: Clock = Clock::get()?;
+        let state =&mut ctx.accounts.state;
+        let position = state.open_liquidity_position_requests.get(index);
+        if let Some(position) = state.open_liquidity_position_requests.get(index) {
+            // Now you can directly access fields of `position`
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            require!(should_cancel , MyError::CallerUnauthorized);
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.open_liquidity_position_requests.remove(index.try_into().unwrap());
         Ok(true)
     }
@@ -150,26 +176,48 @@ mod position_router {
 
     pub fn cancel_close_liquidity_position(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
+        index: usize,
         execution_fee_receiver: Pubkey,
     ) -> Result<bool> {
         // should cancel check to be added 
         // transfer eth out 
+        let clock: Clock = Clock::get().unwrap();
         let state =&mut ctx.accounts.state;
+        if let Some(position) = state.close_liquidity_position_requests.get(index) {
+            // Now you can directly access fields of `position`
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            require!(should_cancel , MyError::CallerUnauthorized);
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.close_liquidity_position_requests.remove(index.try_into().unwrap());
         Ok(true)
     }
 
     pub fn execute_close_liquidity_position(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
+        index: usize,
         execution_fee_receiver: Pubkey,
     ) -> Result<bool> {
         // should execute check 
         // usdc transfer 
         // external call to plugin 
         // transfer out eth 
+        let clock: Clock = Clock::get().unwrap();
         let state =&mut ctx.accounts.state;
+        if let Some(position) = state.close_liquidity_position_requests.get(index) {
+            // Now you can directly access fields of `position`
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            require!(should_cancel , MyError::CallerUnauthorized);
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.close_liquidity_position_requests.remove(index.try_into().unwrap());
         
         Ok(true)
@@ -208,28 +256,71 @@ mod position_router {
 
     pub fn cancel_adjust_liquidity_position_margin(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
-    ) -> Result<()> {
+        index: usize,
+    ) -> Result<bool> {
               // should cancel check to be added 
         // transfer eth out 
         let state =&mut ctx.accounts.state;
+        let clock: Clock = Clock::get().unwrap();
+        let state =&mut ctx.accounts.state;
+        if let Some(position) = state.adjust_liquidity_position_margin_requests.get(index) {
+            // Now you can directly access fields of `position`
+
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            if should_cancel{
+                return Ok(false);
+            }
+            if position.account ==  Pubkey::default(){
+                return Ok(true);
+            }
+
+            if position.margin_delta > 0 {
+                // USDC transfer 
+            } 
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.adjust_liquidity_position_margin_requests.remove(index.try_into().unwrap());
-        Ok(())
+        Ok(true)
 
     }
     
     pub fn execute_adjust_liquidity_position_margin(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
-    ) -> Result<()> {
+        index: usize,
+    ) -> Result<bool> {
         // should execute check 
         // usdc transfer 
         // external call to plugin 
         // transfer out eth 
+        let clock: Clock = Clock::get().unwrap();
         let state =&mut ctx.accounts.state;
+        if let Some(position) = state.adjust_liquidity_position_margin_requests.get(index) {
+            // Now you can directly access fields of `position`
+
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            if should_cancel{
+                return Ok(false);
+            }
+            if position.account ==  Pubkey::default(){
+                return Ok(true);
+            }
+
+            if position.margin_delta > 0 {
+                // USDC transfer 
+            } 
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.adjust_liquidity_position_margin_requests.remove(index.try_into().unwrap());
         
-        Ok(())
+        Ok(true)
     }
 
     pub fn create_increase_risk_buffer_fund_position(
@@ -262,25 +353,60 @@ mod position_router {
 
     pub fn cancel_increase_risk_buffer_fund_position(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
-    ) -> Result<()> {
+        index: usize,
+    ) -> Result<bool> {
   // should cancel check to be added 
         // transfer eth out 
+
+        let clock: Clock = Clock::get().unwrap();
         let state =&mut ctx.accounts.state;
+        if let Some(position) = state.increase_risk_buffer_fund_position_request.get(index) {
+            // Now you can directly access fields of `position`
+
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            if should_cancel{
+                return Ok(false);
+            }
+            if position.account ==  Pubkey::default(){
+                return Ok(true);
+            }
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.increase_risk_buffer_fund_position_request.remove(index.try_into().unwrap());
             
-        Ok(())
+        Ok(true)
     }
 
     pub fn execute_increase_risk_buffer_fund_position(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
+        index: usize,
     ) -> Result<bool> {
      // should execute check 
         // usdc transfer 
         // external call to plugin 
         // transfer out eth 
+        let clock: Clock = Clock::get().unwrap();
         let state =&mut ctx.accounts.state;
+        if let Some(position) = state.increase_risk_buffer_fund_position_request.get(index) {
+            // Now you can directly access fields of `position`
+
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            if should_cancel{
+                return Ok(false);
+            }
+            if position.account ==  Pubkey::default(){
+                return Ok(true);
+            }
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.increase_risk_buffer_fund_position_request.remove(index.try_into().unwrap());
        
     
@@ -302,7 +428,9 @@ mod position_router {
             pool : pool,
             receiver : receiver , 
             liquidityDelta : liquidity_delta , 
-
+            blockTime : clock.unix_timestamp as u128 , 
+            blockNumber : clock.slot as u128, 
+            executionFee : 0 // add msg.value as the execution fee 
         };
         let positions = &mut state.decrease_risk_buffer_fund_position_request;
         positions.push(position);
@@ -311,19 +439,53 @@ mod position_router {
 
     pub fn cancel_decrease_risk_buffer_fund_position(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
+        index: usize,
     ) -> Result<bool> {
         // Function logic here
+        let clock: Clock = Clock::get().unwrap();
         let state =&mut ctx.accounts.state;
+        if let Some(position) = state.decrease_risk_buffer_fund_position_request.get(index) {
+            // Now you can directly access fields of `position`
+
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            if should_cancel{
+                return Ok(false);
+            }
+            if position.account ==  Pubkey::default(){
+                return Ok(true);
+            }
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.decrease_risk_buffer_fund_position_request.remove(index.try_into().unwrap());
         Ok(true) // Placeholder for the cancellation success status
     }
     
     pub fn execute_decrease_risk_buffer_fund_position(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
+        index: usize,
     ) -> Result<bool> {
         let state =&mut ctx.accounts.state;
+        let clock: Clock = Clock::get().unwrap();
+        if let Some(position) = state.decrease_risk_buffer_fund_position_request.get(index) {
+            // Now you can directly access fields of `position`
+
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            if should_cancel{
+                return Ok(false);
+            }
+            if position.account ==  Pubkey::default(){
+                return Ok(true);
+            }
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.decrease_risk_buffer_fund_position_request.remove(index.try_into().unwrap());
         Ok(true) // Placeholder for the cancellation success status
     }
@@ -357,26 +519,68 @@ mod position_router {
         };
         let positions = &mut state.increase_position_request;
         positions.push(position);
-        Ok((positions.len() as u128).into() ) 
+        Ok(((positions.len() -1 ) as u128).into() ) 
     }
 
     pub fn cancel_increase_position(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128, // Assuming index is passed to identify the request
-    ) -> Result<()> {
+        index: usize, // Assuming index is passed to identify the request
+    ) -> Result<bool> {
       // Function logic here
+      let clock: Clock = Clock::get().unwrap();
       let state =&mut ctx.accounts.state;
+      if let Some(position) = state.increase_position_request.get(index) {
+          // Now you can directly access fields of `position`
+
+          let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+          if should_cancel{
+              return Ok(false);
+          }
+          if position.account ==  Pubkey::default(){
+              return Ok(true);
+          }
+
+          if position.marginDelta > 0 {
+            // perform the usdc transfer 
+          }
+          // Logic to remove from vector if needed
+          // state.open_liquidity_position_requests.remove(index);
+      } else {
+          // Handle the case where there is no position at the index
+          msg!("Position at index {} does not exist.", index);
+      }
       state.increase_position_request.remove(index.try_into().unwrap());
-      Ok(()) // Placeholder for the cancellation success status
+      Ok(true) // Placeholder for the cancellation success status
     }
 
     pub fn execute_increase_position(
         ctx: Context<CreateOpenLiquidityPosition>,
-        index: u128,
-    ) -> Result<()> {
+        index: usize,
+    ) -> Result<bool> {
+        let clock: Clock = Clock::get().unwrap();
         let state =&mut ctx.accounts.state;
+        if let Some(position) = state.increase_position_request.get(index) {
+            // Now you can directly access fields of `position`
+  
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            if should_cancel{
+                return Ok(false);
+            }
+            if position.account ==  Pubkey::default(){
+                return Ok(true);
+            }
+  
+            if position.marginDelta > 0 {
+              // perform the usdc transfer 
+            }
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
         state.increase_position_request.remove(index.try_into().unwrap());
-        Ok(()) // Placeholder for the cancellation success status
+        Ok(true) // Placeholder for the cancellation success status
     }
 
     pub fn create_decrease_position(ctx: Context<CreateOpenLiquidityPosition>, margin_delta: u128, size_delta: u128, acceptable_trade_price_x96: u128, receiver: Pubkey , side : bool , pool : Pubkey ) -> Result<u128> {
@@ -404,20 +608,96 @@ mod position_router {
         Ok((positions.len() as u128).into() ) 
     }
 
-    pub fn cancel_decrease_position(ctx: Context<CreateOpenLiquidityPosition>, index: u128, execution_fee_receiver: Pubkey) -> Result<()> {
-      // Function logic here
-      let state =&mut ctx.accounts.state;
+    pub fn cancel_decrease_position(ctx: Context<CreateOpenLiquidityPosition>, index: usize, execution_fee_receiver: Pubkey) -> Result<bool> {
+        let clock: Clock = Clock::get().unwrap();
+        let state =&mut ctx.accounts.state;
+        if let Some(position) = state.decrease_position_request.get(index) {
+            // Now you can directly access fields of `position`
+  
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            if should_cancel{
+                return Ok(false);
+            }
+            if position.account ==  Pubkey::default(){
+                return Ok(true);
+            }
+  
+            if position.marginDelta > 0 {
+              // perform the usdc transfer 
+            }
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
       state.decrease_position_request.remove(index.try_into().unwrap());
-      Ok(()) // Placeholder for the cancellation success status
+      Ok(true) // Placeholder for the cancellation success status
     }
 
-    pub fn execute_decrease_position(ctx: Context<CreateOpenLiquidityPosition>, index: u128, execution_fee_receiver: Pubkey) -> Result<()> {
+    pub fn execute_decrease_position(ctx: Context<CreateOpenLiquidityPosition>, index: usize, execution_fee_receiver: Pubkey) -> Result<bool> {
+        let clock: Clock = Clock::get().unwrap();
         let state =&mut ctx.accounts.state;
-        state.decrease_position_request.remove(index.try_into().unwrap());
-        Ok(()) // Placeholder for the cancellation success status
+        if let Some(position) = state.decrease_position_request.get(index) {
+            // Now you can directly access fields of `position`
+  
+            let should_cancel = _should_cancel(position.blockNumber, position.blockTime, position.account, clock.unix_timestamp as u128, state.min_block_delayer_executor, ctx.accounts.user.key())?;
+            if should_cancel{
+                return Ok(false);
+            }
+            if position.account ==  Pubkey::default(){
+                return Ok(true);
+            }
+  
+            if position.marginDelta > 0 {
+              // perform the usdc transfer 
+            }
+
+            // if position.acceptable_trade_price !=0 {
+            //     _validate_trade_price_X96(position.side , )
+            // }
+            // Logic to remove from vector if needed
+            // state.open_liquidity_position_requests.remove(index);
+        } else {
+            // Handle the case where there is no position at the index
+            msg!("Position at index {} does not exist.", index);
+        }
+      state.decrease_position_request.remove(index.try_into().unwrap());
+      Ok(true) // Placeholder for the cancellation success status
     }
     
 
+}
+
+pub fn _validate_trade_price_X96(side : bool , trade_price : u128 , acceptable_trade_price : u128) -> Result<()> {
+    if (side && trade_price > acceptable_trade_price) || (!side && trade_price < acceptable_trade_price){
+        return err!(MyError::InvalidOperation)
+    }
+
+    Ok(())
+}
+
+pub fn _should_execute_or_cancel(position_block_number : u128 , position_block_time : u128 , account : Pubkey , sender : Pubkey , min_block_delayer_executor :u128 , block_timestamp : u128   ) -> Result<bool> {
+    let is_execute_call =  true ;// placeholder call , add the only executor check 
+    require!(account == sender , MyError::CallerUnauthorized);
+    if (position_block_time + min_block_delayer_executor ) > block_timestamp {
+        return err!(MyError::CallerUnauthorized)
+    }
+
+    
+    Ok(true)
+}
+
+pub fn _should_execute(block_number : u128 , position_block_time : u128, account : Pubkey , block_timestamp : u128 , min_block_delayer_executor :u128 , max_time_delay : u128 , sender : Pubkey) -> Result<bool> {
+    if (position_block_time + max_time_delay) <= block_timestamp {
+        return err!(MyError::CallerUnauthorized)
+    }
+
+    return _should_execute_or_cancel(block_number , position_block_time , account , sender , min_block_delayer_executor , block_timestamp);
+}
+
+pub fn _should_cancel(block_number : u128 , position_block_time : u128, account : Pubkey , block_timestamp : u128 , min_block_delayer_executor :u128  , sender : Pubkey) -> Result<bool> {
+    return _should_execute_or_cancel(block_number , position_block_time , account , sender , min_block_delayer_executor , block_timestamp);
 }
 
 #[account]
@@ -445,9 +725,9 @@ pub struct ContractState {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct OpenLiquidityPositionRequest{
-     account : Pubkey, 
+    account : Pubkey, 
     blockNumber : u128,
-     pool : Pubkey  ,
+    pool : Pubkey  ,
     blockTime : u128 ,
     margin : u128,
     liquidity : u128,
@@ -493,6 +773,10 @@ pub struct DecreaseRiskBufferFundPositionRequest{
     pool: Pubkey,
     liquidityDelta: u128,
     receiver: Pubkey,
+    blockNumber : u128 , 
+    executionFee : u128, 
+    blockTime : u128 ,
+
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
